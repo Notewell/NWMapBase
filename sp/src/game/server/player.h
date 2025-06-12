@@ -233,6 +233,7 @@ public:
 
 	virtual CBotCmd GetLastUserCommand();
 
+
 private:
 	CBasePlayer *m_pParent; 
 };
@@ -272,6 +273,10 @@ public:
 
 #ifdef MAPBASE
 	virtual void			CreateHandModel( int viewmodelindex = 1, int iOtherVm = 0 );
+#endif
+
+#ifdef MAPBASE
+	int						m_rgItems[MAX_ITEMS];
 #endif
 
 	CPlayerState			*PlayerData( void ) { return &pl; }
@@ -1061,6 +1066,10 @@ protected:
 	// Alien Swarm SDK tonemap controller code copies the parameters instead.
 	virtual void UpdateTonemapController( void );
 	//CNetworkHandle( CBaseEntity, m_hTonemapController );
+
+	//Move over here so the inventory system can access it.
+	
+
 #endif
 
 private:
@@ -1085,7 +1094,9 @@ private:
 	int						m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int						m_iTargetVolume;// ideal sound volume. 
 	
+#ifndef MAPBASE
 	int						m_rgItems[MAX_ITEMS];
+#endif
 
 	// these are time-sensitive things that we keep track of
 	float					m_flSwimTime;		// how long player has been underwater

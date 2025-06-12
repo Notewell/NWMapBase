@@ -96,6 +96,9 @@ $Project
 			
 			$File	"mapbase\logic_eventlistener.cpp"
 			$File	"mapbase\logic_register_activator.cpp"
+			
+			$File	"mapbase\item_inventory.h"
+			$File	"mapbase\item_inventory.cpp"
 		}
 		
 		$Folder "HL2 DLL"
