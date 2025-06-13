@@ -14,11 +14,10 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_SERVERCLASS_ST(CWeaponC42FirearmBase, DT_WeaponC42Firearm)
-END_SEND_TABLE()
+IMPLEMENT_NETWORKCLASS_ALIASED(WeaponC42FirearmBase, DT_WeaponC42FirearmBase);
 
-LINK_ENTITY_TO_CLASS(weapon_c42basefirearm, CWeaponC42FirearmBase);
-PRECACHE_WEAPON_REGISTER(weapon_c42basefirearm);
+BEGIN_NETWORK_TABLE(CWeaponC42FirearmBase, DT_WeaponC42FirearmBase)
+END_NETWORK_TABLE()
 
 BEGIN_DATADESC(CWeaponC42FirearmBase)
 
@@ -28,6 +27,9 @@ DEFINE_FIELD(m_flAccuracyPenalty, FIELD_FLOAT), //NOTENOTE: This is NOT tracking
 DEFINE_FIELD(m_nNumShotsFired, FIELD_INTEGER),
 
 END_DATADESC()
+
+LINK_ENTITY_TO_CLASS(weapon_c42firearmbase, CWeaponC42FirearmBase);
+PRECACHE_WEAPON_REGISTER(weapon_c42firearmbase);
 
 //Act table
 
@@ -182,10 +184,6 @@ int GetBaseWeaponActtableCount()
 }
 #endif
 
-
-
-
-
 //End Acttable
 
 CWeaponC42FirearmBase::CWeaponC42FirearmBase(void)
@@ -225,6 +223,56 @@ void CWeaponC42FirearmBase::DryFire(void)
 
 }
 
+void CWeaponC42FirearmBase::ItemPreFrame()
+{
+	UpdatePenaltyTime();
+	BaseClass::ItemPreFrame();
+}
+
+void CWeaponC42FirearmBase::ItemBusyFrame()
+{
+	UpdatePenaltyTime();
+	BaseClass::ItemBusyFrame();
+}
+
+void CWeaponC42FirearmBase::ItemPostFrame(void)
+{
+	BaseClass::ItemPostFrame();
+
+	if (!m_isTrueSemiauto) { return; }
+
+	if (m_bInReload) { return; }
+
+	CBasePlayer* pOwner = ToBasePlayer(GetOwner());
+	if (pOwner == NULL)
+		return;
+
+	//Allow a refire as fast as the player can click
+	if (((pOwner->m_nButtons & IN_ATTACK) == false) && (m_flSoonestPrimaryAttack < gpGlobals->curtime))
+	{
+		m_flNextPrimaryAttack = gpGlobals->curtime - 0.1f;
+	}
+	else if ((pOwner->m_nButtons & IN_ATTACK) && (m_flNextPrimaryAttack < gpGlobals->curtime) && (m_iClip1 <= 0))
+	{
+		DryFire();
+	}
+}
+
+void CWeaponC42FirearmBase::UpdatePenaltyTime(void)
+{
+	CBasePlayer* pOwner = ToBasePlayer(GetOwner());
+
+	if (pOwner == NULL)
+		return;
+
+	// Check our penalty time decay
+	if (((pOwner->m_nButtons & IN_ATTACK) == false) && (m_flSoonestPrimaryAttack < gpGlobals->curtime))
+	{
+		m_flAccuracyPenalty -= gpGlobals->frametime;
+		m_flAccuracyPenalty = clamp(m_flAccuracyPenalty, 0.0f, m_accuracy_max_penalty_time);
+	}
+}
+
 #ifdef MAPBASE
 void CWeaponC42FirearmBase::FireNPCPrimaryAttack(CBaseCombatCharacter* pOperator, Vector& vecShootOrigin, Vector& vecShootDir)
 {
@@ -248,9 +296,84 @@ void CWeaponC42FirearmBase::Operator_ForceNPCFire(CBaseCombatCharacter* pOperato
 }
 #endif
 
-void CWeaponC42FirearmBase::FireProjectile(void)
+//For base firearms, assume we fire raytraced bullets. Override this to fire other shit.
+void CWeaponC42FirearmBase::FireProjectile(FireBulletsInfo_t info, CBasePlayer *pPlayer)
 {
-	//ToDo
+	pPlayer->FireBullets(info);
+}
+
+void CWeaponC42FirearmBase::PrimaryAttack(void)
+{
+	//Change: No Autoreload when empty. Make the player think, even a LITTLE!
+
+	//Only the player fires with this function :3
+
+	CBasePlayer* pPlayer = ToBasePlayer(GetOwner());
+
+	if (!pPlayer)
+	{
+		DevMsg("PrimaryAttack() tried to call without a valid player!");
+		return;
+	}
+
+	pPlayer->DoMuzzleFlash();
+
+	SendWeaponAnim(GetPrimaryAttackActivity());
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+
+	FireBulletsInfo_t info;
+	info.m_vecSrc = pPlayer->Weapon_ShootPosition();
+	info.m_vecDirShooting = pPlayer->GetAutoaimVector(AUTOAIM_SCALE_DEFAULT);
+
+	//Make it framerate independent
+	info.m_iShots = 0;
+	float fireRate = GetFireRate();
+
+	while (m_flNextPrimaryAttack <= gpGlobals->curtime)
+	{
+		WeaponSound(SINGLE, m_flNextPrimaryAttack);
+		m_flNextPrimaryAttack = m_flNextPrimaryAttack + fireRate;
+		info.m_iShots++;
+		if (!fireRate)
+			break;
+	}
+
+	//Don't fire more than we have loaded
+	if (UsesClipsForAmmo1())
+	{
+		info.m_iShots = MIN(info.m_iShots, m_iClip1);
+		m_iClip1 -= info.m_iShots;
+	}
+	else
+	{
+		info.m_iShots = MIN(info.m_iShots, pPlayer->GetAmmoCount(m_iPrimaryAmmoType));
+		pPlayer->RemoveAmmo(info.m_iShots, m_iPrimaryAmmoType);
+	}
+
+	info.m_flDistance = MAX_TRACE_LENGTH;
+	info.m_iAmmoType = m_iPrimaryAmmoType;
+	info.m_iTracerFreq = 2;
+
+#if !defined( CLIENT_DLL )
+	// Fire the bullets
+	info.m_vecSpread = pPlayer->GetAttackSpread(this);
+#else
+	//!!!HACKHACK - what does the client want this function for? 
+	info.m_vecSpread = GetActiveWeapon()->GetBulletSpread();
+#endif // CLIENT_DLL
+
+	FireProjectile(info, pPlayer);
+
+	//Change: Don't make the HEV suit speak about this.
+
+	//Vick view
+	AddViewKick();
+
+	m_flAccuracyPenalty += m_accuracy_shot_penalty;
+
+	m_iPrimaryAttacks++;
+	gamestats->Event_WeaponFired(pPlayer, true, GetClassname());
 }
 
 void CWeaponC42FirearmBase::UpdatePenalityTime(void)
@@ -272,3 +395,4 @@ Activity CWeaponC42FirearmBase::GetPrimaryAttackActivity(void)
 {
 	return ACT_VM_PRIMARYATTACK;
 }
+

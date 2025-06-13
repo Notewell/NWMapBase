@@ -18,20 +18,36 @@ extern acttable_t* GetPistolActtable();
 extern int GetPistolActtableCount();
 #endif
 
+#ifdef CLIENT_DLL
+	#define CWeaponC42FirearmBase C_WeaponC42FirearmBase
+#endif
+
 class CWeaponC42FirearmBase : public CBaseC42Weapon
 {
 
-	DECLARE_DATADESC();
 public:
 	DECLARE_CLASS(CWeaponC42FirearmBase, CBaseC42Weapon);
 
+	DECLARE_NETWORKCLASS();
+	DECLARE_PREDICTABLE();
+	DECLARE_DATADESC();
+	DECLARE_ACTTABLE();
+
 	CWeaponC42FirearmBase(void);
 
-	DECLARE_SERVERCLASS();
 
 
 	void	AddViewKick(void);
 	void	DryFire(void);
+
+	void	PrimaryAttack(void);
+
+	void	ItemPreFrame(void);
+	void	ItemBusyFrame(void);
+
+	void	ItemPostFrame(void);
+
+	void	UpdatePenaltyTime();
 
 
 #ifdef MAPBASE
@@ -39,7 +55,7 @@ public:
 	void	Operator_ForceNPCFire(CBaseCombatCharacter* pOperator, bool bSecondary);
 #endif
 
-	void FireProjectile(void);
+	void FireProjectile(FireBulletsInfo_t info, CBasePlayer *pPlayer);
 
 	void UpdatePenalityTime(void);
 
@@ -53,12 +69,14 @@ public:
 	// Default to pistol acttable
 	virtual acttable_t* GetBackupActivityList() { return GetPistolActtable(); }
 	virtual int				GetBackupActivityListCount() { return GetPistolActtableCount(); }
+
 #endif
 
 
-	DECLARE_ACTTABLE();
-
 protected:
+
+	bool m_isTrueSemiauto = false;
+
 	float m_flSoonestPrimaryAttack;
 	float m_flLastAttackTime;
 	float m_flAccuracyPenalty;
@@ -70,6 +88,8 @@ protected:
 	float m_verticalveiwkickmax = 0.6f;
 	
 	float m_accuracy_max_penalty_time = 1.5f;
+	float m_accuracy_shot_penalty = 0.2;
+
 
 };
 
