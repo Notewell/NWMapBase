@@ -20,16 +20,6 @@ LINK_ENTITY_TO_CLASS(weapon_securitypistol, CWeaponSecurityPistol);
 
 PRECACHE_WEAPON_REGISTER(weapon_securitypistol);
 
-IMPLEMENT_NETWORKCLASS_ALIASED(WeaponSecurityPistol, DT_WeaponSecurityPistol)
-
-BEGIN_NETWORK_TABLE(CWeaponSecurityPistol, DT_WeaponSecurityPistol)
-#if !defined( CLIENT_DLL )
-//	SendPropInt( SENDINFO( m_bReflectViewModelAnimations ), 1, SPROP_UNSIGNED ),
-#else
-//	RecvPropInt( RECVINFO( m_bReflectViewModelAnimations ) ),
-#endif
-
-END_NETWORK_TABLE()
 
 BEGIN_DATADESC(CWeaponSecurityPistol)
 END_DATADESC()
@@ -164,7 +154,6 @@ acttable_t	CWeaponSecurityPistol::m_acttable[] =
 
 IMPLEMENT_ACTTABLE(CWeaponSecurityPistol);
 
-// Allows Weapon_BackupActivity() to access the 357's activity table.
 acttable_t* GetSecurityPistolActtable()
 {
 	return CWeaponSecurityPistol::m_acttable;
@@ -232,16 +221,14 @@ void CWeaponSecurityPistol::PrimaryAttack(void)
 	{
 		m_nNumShotsFired++;
 	}
-
-	m_flLastAttackTime = gpGlobals->curtime;
-	m_flSoonestPrimaryAttack = gpGlobals->curtime + GetFireRate();
+	
 	CSoundEnt::InsertSound(SOUND_COMBAT, GetAbsOrigin(), SOUNDENT_VOLUME_PISTOL, 0.2, GetOwner());
-
-	CBasePlayer* pOwner = ToBasePlayer(GetOwner());
-
-	if (pOwner)
-		pOwner->ViewPunchReset(); // This was in the HL2 code for the pistol but maybe we don't wanna do that?
-	// I think the drift might be good for differentiation (and applying player skill)
+	
+	//CBasePlayer* pOwner = ToBasePlayer(GetOwner());
+	//
+	//if (pOwner)
+	//	pOwner->ViewPunchReset(); // This was in the HL2 code for the pistol but maybe we don't wanna do that?
+	//// I think the drift might be good for differentiation (and applying player skill)
 
 	BaseClass::PrimaryAttack();
 

@@ -64,7 +64,7 @@ public:
 #endif
 
 
-	DECLARE_SERVERCLASS();
+	//DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 
 #ifdef MAPBASE

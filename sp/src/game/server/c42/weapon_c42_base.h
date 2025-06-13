@@ -33,6 +33,8 @@ public:
 	virtual bool	Holster(CBaseCombatWeapon* pSwitchingTo);
 	virtual void	WeaponIdle(void);
 
+	void			ItemPostFrame(void);
+
 	virtual void	AddViewmodelBob(CBaseViewModel* viewmodel, Vector& origin, QAngle& angles);
 	virtual	float	CalcViewmodelBob(void);
 
@@ -41,6 +43,8 @@ public:
 
 	virtual const	WeaponProficiencyInfo_t* GetProficiencyValues();
 	static const	WeaponProficiencyInfo_t* GetDefaultProficiencyValues();
+
+	void			HandleFireOnEmpty();
 
 	virtual void	ItemHolsterFrame(void);
 

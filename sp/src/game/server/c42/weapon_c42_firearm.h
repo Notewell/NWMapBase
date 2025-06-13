@@ -28,8 +28,6 @@ class CWeaponC42FirearmBase : public CBaseC42Weapon
 public:
 	DECLARE_CLASS(CWeaponC42FirearmBase, CBaseC42Weapon);
 
-	DECLARE_NETWORKCLASS();
-	DECLARE_PREDICTABLE();
 	DECLARE_DATADESC();
 	DECLARE_ACTTABLE();
 

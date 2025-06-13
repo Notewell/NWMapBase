@@ -14,7 +14,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-IMPLEMENT_NETWORKCLASS_ALIASED(WeaponC42FirearmBase, DT_WeaponC42FirearmBase);
+//IMPLEMENT_NETWORKCLASS_ALIASED(WeaponC42FirearmBase, DT_WeaponC42FirearmBase);
 
 BEGIN_NETWORK_TABLE(CWeaponC42FirearmBase, DT_WeaponC42FirearmBase)
 END_NETWORK_TABLE()
@@ -305,6 +305,7 @@ void CWeaponC42FirearmBase::FireProjectile(FireBulletsInfo_t info, CBasePlayer *
 void CWeaponC42FirearmBase::PrimaryAttack(void)
 {
 	//Change: No Autoreload when empty. Make the player think, even a LITTLE!
+	// Note: Annoyingly, this change doesn't work
 
 	//Only the player fires with this function :3
 

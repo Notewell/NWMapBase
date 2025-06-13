@@ -120,7 +120,7 @@ public:
 			static int warningCount = 0;
 			if ( ++warningCount < 10 )
 			{
-				AssertMsg2( 0, "Node (%i) out of range (%i total)\n", id, m_iNumNodes ); 
+				//AssertMsg2( 0, "Node (%i) out of range (%i total)\n", id, m_iNumNodes ); // NW - Don't assert just because a map has no nodes!
 			}
 		}
 		return NULL; 
