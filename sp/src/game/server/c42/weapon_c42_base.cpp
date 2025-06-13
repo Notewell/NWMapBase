@@ -184,8 +184,8 @@ void CBaseC42Weapon::ItemPostFrame(void) // More or less just the baseweapon pos
 		// -----------------------
 		if ((pOwner->m_nButtons & IN_RELOAD) && UsesClipsForAmmo1() && !m_bInReload)
 		{
-			// reload when reload is pressed, or if no buttons are down and weapon is empty.
-			Reload();
+			// reload when reload is pressed
+			Reload(); //Reenable ME
 			m_fFireDuration = 0.0f;
 		}
 
@@ -195,7 +195,7 @@ void CBaseC42Weapon::ItemPostFrame(void) // More or less just the baseweapon pos
 		if (!((pOwner->m_nButtons & IN_ATTACK) || (pOwner->m_nButtons & IN_ATTACK2) || (CanReload() && pOwner->m_nButtons & IN_RELOAD)))
 		{
 			// no fire buttons down or reloading
-			if (!ReloadOrSwitchWeapons() && (m_bInReload == false))
+			if (m_bInReload == false)
 			{
 				WeaponIdle();
 			}
@@ -206,12 +206,92 @@ void CBaseC42Weapon::ItemPostFrame(void) // More or less just the baseweapon pos
 
 }
 
+void CBaseC42Weapon::PrimaryAttack(void)
+{
+	// If my clip is empty (and I use clips) start reload
+	//if (UsesClipsForAmmo1() && !m_iClip1)
+	//{
+	//	Reload();
+	//	return;
+	//}
+
+	// Only the player fires this way so we can cast
+	CBasePlayer* pPlayer = ToBasePlayer(GetOwner());
+
+	if (!pPlayer)
+	{
+		return;
+	}
+
+	pPlayer->DoMuzzleFlash();
+
+	SendWeaponAnim(GetPrimaryAttackActivity());
+
+	// player "shoot" animation
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+
+	FireBulletsInfo_t info;
+	info.m_vecSrc = pPlayer->Weapon_ShootPosition();
+
+	info.m_vecDirShooting = pPlayer->GetAutoaimVector(AUTOAIM_SCALE_DEFAULT);
+
+	// To make the firing framerate independent, we may have to fire more than one bullet here on low-framerate systems, 
+	// especially if the weapon we're firing has a really fast rate of fire.
+	info.m_iShots = 0;
+	float fireRate = GetFireRate();
+
+	while (m_flNextPrimaryAttack <= gpGlobals->curtime)
+	{
+		// MUST call sound before removing a round from the clip of a CMachineGun
+		WeaponSound(SINGLE, m_flNextPrimaryAttack);
+		m_flNextPrimaryAttack = m_flNextPrimaryAttack + fireRate;
+		info.m_iShots++;
+		if (!fireRate)
+			break;
+	}
+
+	// Make sure we don't fire more than the amount in the clip
+	if (UsesClipsForAmmo1())
+	{
+		info.m_iShots = MIN(info.m_iShots, m_iClip1);
+		m_iClip1 -= info.m_iShots;
+	}
+	else
+	{
+		info.m_iShots = MIN(info.m_iShots, pPlayer->GetAmmoCount(m_iPrimaryAmmoType));
+		pPlayer->RemoveAmmo(info.m_iShots, m_iPrimaryAmmoType);
+	}
+
+	info.m_flDistance = MAX_TRACE_LENGTH;
+	info.m_iAmmoType = m_iPrimaryAmmoType;
+	info.m_iTracerFreq = 2;
+
+#if !defined( CLIENT_DLL )
+	// Fire the bullets
+	info.m_vecSpread = pPlayer->GetAttackSpread(this);
+#else
+	//!!!HACKHACK - what does the client want this function for? 
+	info.m_vecSpread = GetActiveWeapon()->GetBulletSpread();
+#endif // CLIENT_DLL
+
+	pPlayer->FireBullets(info);
+
+	if (!m_iClip1 && pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0)
+	{
+		// HEV suit - indicate out of ammo condition
+		pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+	}
+
+	//Add our view kick in
+	AddViewKick();
+}
+
 void CBaseC42Weapon::HandleFireOnEmpty()
 {
 	// If we're already firing on empty, reload if we can
 	if (m_bFireOnEmpty)
 	{
-			ReloadOrSwitchWeapons();
+			//ReloadOrSwitchWeapons();
 			m_fFireDuration = 0.0f;
 	}
 	else
